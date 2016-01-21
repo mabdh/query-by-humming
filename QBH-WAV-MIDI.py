@@ -66,9 +66,11 @@ def pattern2UDS(pattern):
 
 def convert_wav_to_midi(filename):
     # filename without extension
-    filewav = filename + ".wav"
-    filemidi = "midiFiles/" + filename + ".mid"
+    filewav = "wavFile/" + filename + ".wav"
+    filemidi = "midiFile/" + filename + ".mid"
     os.system("./waon -i " + filewav + " -o " + filemidi + " -w 3 -n 4096 -s 2048")
+
+# DATABASE ACCESS
 
 def write_over_midifiles_to_db(dbController, midiFiles):
     id_file = 1
@@ -113,6 +115,8 @@ def get_random_mock_hum_from_uds(dbController):
         filename = dbController.get_filename_from_id(rand_id)
         return filename,hum
 
+# COMPARING
+
 def compare_hum_uds(hum,uds):
     partialRatio = fuzz.partial_ratio(hum,uds)
     ratio = fuzz.ratio(hum,uds)
@@ -144,17 +148,22 @@ def search_hum_in_db(hum, dbController):
         print("Hum: ", hum)
         print("FullUDS: ", udsString)
 
+# MAIN
 if __name__ == "__main__":
     dataDir = '/Users/muhammadabduh/Documents/Research/query-by-humming/'
     os.chdir(dataDir)
     midiFiles = glob.glob("midiFile/*.mid")
+
+    convert_wav_to_midi('classic')
     # udsFile = dataDir + 'listOfUDS.pickle'
     dbController = DBController('QBH')
-    # write_over_midifiles_to_db(dbController, midiFiles)
+    write_over_midifiles_to_db(dbController, midiFiles)
     filename, hum = get_random_mock_hum_from_uds(dbController)
     print("filename ", filename)
     search_hum_in_db(hum, dbController)
+    show_filenames_from_databases(dbController)
     # show_filenames_and_uds_from_databases(dbController)
+
 
 # minLen = 5
 # pointer = randint(0,len(listOfUDSString)-1)
