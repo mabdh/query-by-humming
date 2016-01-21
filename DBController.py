@@ -58,7 +58,7 @@ class DBController :
 			self.db.rollback()
 			raise e
 
-	def start_over_tables():
+	def start_over_tables(self):
 		self.drop_table_uds
 		self.drop_table_idmap
 		self.initiate_table_uds()
@@ -85,6 +85,12 @@ class DBController :
 		cursor.execute('''SELECT id, filename FROM idmap''')
 		all_rows = cursor.fetchall()
 		return all_rows
+
+	def get_filename_from_id(self,id_var):
+		cursor = self.db.cursor()
+		cursor.execute('''SELECT filename FROM idmap WHERE id=?''', (id_var,))
+		filename = cursor.fetchone()
+		return filename
 
 	def get_uds_string_from_id(self,id_var):
 		cursor = self.db.cursor()
