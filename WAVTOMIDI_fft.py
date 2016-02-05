@@ -75,7 +75,7 @@ def plot_fft(signal, sampleRate):
 def freq_to_midi(freqArray):
     return [int(round(69 + 12 * math.log(f / 440.0, 2))) for f in freqArray]
 
-def create_midi(midiNotes):
+def create_midi(midiNotes,tick_ms):
     pattern = midi.Pattern()
     track = midi.Track()
     pattern.append(track)
@@ -83,11 +83,11 @@ def create_midi(midiNotes):
     i = 0
     idx = 0
     while i < len(midiNotes):
-        # i_n = i
-        on = midi.NoteOnEvent(tick=idx, velocity=100, pitch=midiNotes[i])
+        
+        on = midi.NoteOnEvent(tick=int(tick_ms[idx][0]), velocity=100, pitch=midiNotes[i])
         track.append(on)
-        idx = idx + 20
-        off = midi.NoteOffEvent(tick=idx, pitch=midiNotes[i])
+        
+        off = midi.NoteOffEvent(tick=int(tick_ms[idx][1]), pitch=midiNotes[i])
         track.append(off)
         i = i + 1
         idx = idx + 1
@@ -101,6 +101,138 @@ def create_midi(midiNotes):
 def getEnergy(streamData):
 	sumRes = np.sum(abs(streamData)**2.0)
 	return sumRes/len(streamData)
+
+def fundamental_freq_fft(signal,sampleRate):
+    n = len(signal)
+    print(n)
+
+    # To quantify energy
+    frame_ms = 2
+    frame_s = frame_ms / 1000.0
+    frame_samples = int(frame_s * sampleRate)
+    # frame_samples = 1024
+    # percent %
+    overlap = 0.5
+    overlap_samples = int(overlap * frame_samples)
+    downsampleorder = 100
+    i = 0
+    freqArray = []
+
+    # print(frame_samples)
+
+    #calculate energy
+    energyStream = []
+    while(i < n):
+        signal_sample = signal[i:i+frame_samples]
+        n_sig_sample = len(signal_sample)
+        Nfft = n_sig_sample
+        windowed = signal_sample * hann(n_sig_sample, Nfft)
+        en = getEnergy(windowed)
+        energyStream.append(en)
+        i = i + frame_samples - overlap_samples
+
+    #threshold
+    meanEnergy = np.sum(energyStream)/len(energyStream)
+    energyTh = meanEnergy/4
+
+    for i in range(len(energyStream)):
+        if energyStream[i] < energyTh:
+            energyStream[i] = 0.0
+    # print(energyTh)
+
+    #segmenting
+    energyStream = np.cumsum(energyStream)
+    energyStream = energyStream[0::downsampleorder]
+    energyStream = np.gradient(np.gradient(energyStream))
+
+    #get indices with zero crossing
+    indices = []
+    indices = np.where(((energyStream[1:] >= 0) & (energyStream[:-1] < 0)) | ((energyStream[1:] < 0) & (energyStream[:-1] >= 0)))[0]
+    if(len(indices)%2!=0):
+        indices = indices[0:len(indices)-1]
+    
+    indices = np.split(indices,int(len(indices)/2)) 
+    indices = [idx * (1.0-overlap) for idx in indices]
+    print(n/frame_samples)
+    print(len(energyStream))
+    print(indices)
+    # for i in range(1,len(energyStream)-1):
+        # if ((energyStream[i-1] < 0) and (energyStream[i+1] > 0)) or ((energyStream[i-1] > 0) and (energyStream[i+1] < 0)):
+        #   indices.append(i)
+
+    # plt.figure(1)
+    # plt.plot(energyStream)
+    # plt.figure(2)
+    # plt.plot(signal)
+    # plt.figure(3)
+    # plt.step(np.arange(len(indices)),indices)
+    # plt.show()
+    # print(energyStream)
+    
+    multiplier = downsampleorder * frame_samples
+    tick_indices=[]
+    for idx in indices:
+        idx = idx * multiplier
+        istart = idx[0]
+        frame_samples = idx[1] - idx[0] 
+
+        if istart+frame_samples >= n:
+            frame_samples = n - istart
+        print("debug " + str(n) + " " + str(istart) + " " + str(frame_samples))
+        
+        tickidx = np.array([istart,istart+frame_samples])
+        tickidx = (tickidx/sampleRate) * 100 #convert to ms
+        tickidx = tickidx.astype(int)
+
+        tick_indices.append(tickidx)
+
+        signal_sample = signal[istart:istart+frame_samples]
+        n_sig_sample = len(signal_sample)
+
+        # plt.figure(5)
+        # plt.plot(signal_sample)
+        # plt.show()
+
+        Nfft = n_sig_sample
+        windowed = signal_sample * hann(n_sig_sample, Nfft)
+        # print("debug " + str(len(windowed)))
+        freq = rfft(windowed, Nfft)    
+        freq_d2 = rfft(windowed, Nfft)
+        freq_d3 = rfft(windowed, Nfft)
+
+        freq_d2 =  freq_d2[0::2]
+        diff = len(freq) - len(freq_d2)
+        freq_d2 = np.lib.pad(freq_d2, (0,diff),'constant', constant_values=(0,0))
+        freq_d3 =  freq_d3[0::3]
+        diff = len(freq) - len(freq_d3)
+        freq_d3 = np.lib.pad(freq_d3, (0,diff),'constant', constant_values=(0,0))
+
+        mul1 = np.multiply(freq,freq_d2)
+        mul2 = np.multiply(mul1,freq_d3)
+
+        freqF0 = argmax(mul2) * (sampleRate / n_sig_sample)
+        
+        if(freqF0 > 0.0):
+            freqF0 = int(round(69 + 12 * math.log(freqF0 / 440.0, 2)))
+        else:
+            freqF0 = 0
+        print(freqF0)
+        freqArray.append(freqF0)
+        # i = i + frame_samples - overlap_samples
+    plt.figure(1)
+
+    # freqAxis = arange(0, len(freq), 1.0) * (sampleRate / len(freq))
+    # plt.plot(freqAxis/1000, 10*log10(freq))
+    # plt.plot(freqArray)
+    # plt.xlabel('k-sample')
+    # plt.ylabel('Frequency (Hz)')
+    
+    # plt.figure(2)
+    # plt.plot(signal)
+    # plt.show()
+    print(tick_indices)
+    print(freqArray)
+    return freqArray, tick_indices
 
 def fundamental_freq_fft_windowed(signal,sampleRate):
     n = len(signal)
@@ -232,7 +364,7 @@ def show_spectrogram(x, fs):
 
 # stream = open("wavFile/Berklee/piano_C2.wav")
 # stream = open("wavFile/gnote.mp3")
-stream = open("wavFile/c4scale.wav")
+stream = open("wavFile/C4humm.wav")
 
 # partStream = stream[0:(int(len(stream)*0.3))]
 # plt.plot(stream)
@@ -241,8 +373,8 @@ stream = open("wavFile/c4scale.wav")
 sampleRate = 44100
 # show_spectrogram(stream,sampleRate)
 
-freqArray = fundamental_freq_fft_windowed(stream,sampleRate)
+freqArray, tick_ms = fundamental_freq_fft(stream,sampleRate)
 # midiNotes = freq_to_midi(freqArray)
-create_midi(freqArray)
+create_midi(freqArray,tick_ms)
 # pattern = midi.read_midifile("test.mid")
 # print(pattern)
