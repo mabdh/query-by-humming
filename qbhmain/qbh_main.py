@@ -8,6 +8,8 @@ from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 from DBController import DBController
 from WavToMidi import WavToMidi
+import matplotlib.pyplot as plt
+import numpy as np
 
 class NoteEvent:
     tickDuration =  0
@@ -126,20 +128,26 @@ def compare_hum_uds(hum,uds):
     ratio = fuzz.ratio(hum,uds)
     return ratio, partialRatio
 
-def search_hum_in_db(hum, dbController):
+def search_hum_in_db(hum, dbController, fileHummName):
     files_db = dbController.get_uds_file_list()
     bestPartialRatio = -1
     bestRatio = -1
     idxMatch = -1
     counter = 0
+    print("Humm file : " + fileHummName)
     print("\n-------------------------------------")
     idxpartial = 0
     idxfull = 0
     prevPartialScore = 0
     prevFullScore = 0
+
+    ratioArray = []
+    partialRatioArray = []
+    filenameArray = []
     for file in files_db:
         udsString = dbController.get_uds_string_from_id(file[0])
         print(str(file[1]))
+        filenameArray.append(str(file[1]))
         ratio, partialRatio = compare_hum_uds(hum, udsString)
         # print(counter)
         if(bestPartialRatio < partialRatio):
@@ -159,9 +167,29 @@ def search_hum_in_db(hum, dbController):
         	idxfull = file[0]
         	prevFullScore = ratio
         # ------------------------
+        ratioArray.append(ratio)
+        partialRatioArray.append(partialRatio)
         print("FullRatio:", ratio)
         print("PartialRatio: ", partialRatio)
         print("==============")
+
+    index = np.arange(len(files_db))
+    bar_width = 0.35
+    opacity = 0.4# error_config = {'ecolor': '0.3'}
+    rects1 = plt.bar(index, ratioArray, bar_width, alpha=opacity, color='b', label='Ratio')
+    for a,b in zip(index, ratioArray):
+    	plt.text(a+(bar_width/2), 10, str(b))
+    rects2 = plt.bar(index + bar_width, partialRatioArray, bar_width, alpha=opacity, color='r', label='Partial Ratio')
+    for a,b in zip(index, partialRatioArray):
+    	plt.text((a + bar_width)+(bar_width/2), 10, str(b))
+    plt.xlabel('Group')
+    plt.ylabel('Scores')
+    plt.title('Scores of ' + fileHummName)
+    plt.xticks(index + bar_width, filenameArray)
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
     # if(idxMatch>=0):
     #     print("IdxMatch: ", idxMatch)
     # print("Hum: ", hum)
@@ -170,7 +198,8 @@ def search_hum_in_db(hum, dbController):
 
 # MAIN
 if __name__ == "__main__":
-	dataDir = '/home/abduhslab/Dropbox/RWTH/LabMultimediaAnalysis/query-by-humming/'
+	# dataDir = '/home/abduhslab/Dropbox/RWTH/LabMultimediaAnalysis/query-by-humming/'
+	dataDir = './'
 	loop = 1
 	while loop == 1:
 		try:
@@ -208,6 +237,7 @@ if __name__ == "__main__":
 				dbController.start_over_tables()
 				for file in midiFiles:
 					dataFullpath = dataDir + file
+					print(dataFullpath)
 					pattern = midi.read_midifile(dataFullpath)
 					udsString= pattern2UDS(pattern)
 					dbController.insert_new_uds_file(id_file, file, udsString)
@@ -225,7 +255,7 @@ if __name__ == "__main__":
 					dataFullpath = dataDir + f
 					pattern = midi.read_midifile(dataFullpath)
 					udsString= pattern2UDS(pattern)
-					full, partial = search_hum_in_db(udsString, dbController)
+					full, partial = search_hum_in_db(udsString, dbController, f)
 					print(f + " match with : ")
 					print("Full : " + str(get_filename_from_id(dbController,full)))
 					print("Partial : " + str(get_filename_from_id(dbController,partial)))

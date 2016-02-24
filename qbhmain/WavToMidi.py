@@ -220,11 +220,11 @@ class WavToMidi:
             freq_d2[:20] = 0
             freq_d3[:20] = 0
 
-            f, (ax1, ax2, ax3) = plt.subplots(3, sharex=True, sharey=True)
-            ax1.plot(freq)
-            ax1.set_title('Sharing both axes')
-            ax2.plot(freq_d2)
-            ax3.plot(freq_d3)
+            # f, (ax1, ax2, ax3) = plt.subplots(3, sharex=True, sharey=True)
+            # ax1.plot(freq)
+            # ax1.set_title('Sharing both axes')
+            # ax2.plot(freq_d2)
+            # ax3.plot(freq_d3)
 
             mul1 = np.multiply(freq,freq_d2)
             mul2 = np.multiply(mul1,freq_d3)
@@ -238,7 +238,7 @@ class WavToMidi:
             # print(freqF0)
             freqArray.append(freqF0)
             # i = i + frame_samples - overlap_samples
-        plt.figure(1)
+        # plt.figure(1)
 
         # freqAxis = arange(0, len(freq), 1.0) * (sampleRate / len(freq))
         # plt.plot(freqAxis/1000, 10*log10(freq))
