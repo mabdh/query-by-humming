@@ -8,6 +8,7 @@ from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 from DBController import DBController
 from WavToMidi import WavToMidi
+from WavToMidiAutocorrelation import WavToMidiAutocorrelation
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -214,18 +215,20 @@ if __name__ == "__main__":
 			
 			dbController = DBController('QBH')
 			wavToMidi = WavToMidi()
-
-			os.system('clear')
+			wavToMidiAutocorrelation = WavToMidiAutocorrelation()
+			# os.system('clear')
 			print("Select options :")
 			print("(1) Show song database list")
 			print("(2) Write over database with wav files in wavFiles folder")
-			print("(3) Match the humming file")
+			print("(3) Match the humming file using Harmonic Product Spectrum method")
+			print("(4) Match the humming file using Autocorrelation method")
 			print("(5) Exit")
 			choice = input("Choose your option: ")
 			choice = int(choice)
 			if choice==1:
 				show_filenames_from_databases(dbController)
 				# print(str(dbController.get_uds_string_from_id(3)))
+				print("Press any key to back to menu")
 				input()
 			if choice==2:
 				for f in wavFiles:
@@ -244,6 +247,7 @@ if __name__ == "__main__":
 					id_file = id_file + 1
 					print(file + " was added")
 				print("Completed")
+				print("Press any key to back to menu")
 				input()
 			if choice==3:
 				for f in hummFiles:
@@ -259,9 +263,23 @@ if __name__ == "__main__":
 					print(f + " match with : ")
 					print("Full : " + str(get_filename_from_id(dbController,full)))
 					print("Partial : " + str(get_filename_from_id(dbController,partial)))
+				print("Press any key to back to menu")
 				input()
 			if choice==4:
-				print("4chose")
+				for f in hummFiles:
+					wavToMidiAutocorrelation.convert(f,1)
+				print("\nAll wav files are converted..")
+				print("Comparing humming data..\n")
+				hummFilesMid = glob.glob("hummFile/*.mid")
+				for f in hummFilesMid:
+					dataFullpath = dataDir + f
+					pattern = midi.read_midifile(dataFullpath)
+					udsString= pattern2UDS(pattern)
+					full, partial = search_hum_in_db(udsString, dbController, f)
+					print(f + " match with : ")
+					print("Full : " + str(get_filename_from_id(dbController,full)))
+					print("Partial : " + str(get_filename_from_id(dbController,partial)))
+				print("Press any key to back to menu")
 			if choice==5:
 				print("Exit..")
 				loop = 0

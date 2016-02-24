@@ -12,7 +12,6 @@ import scipy.io.wavfile
 from subprocess import Popen, PIPE
 import midi
 from pylab import *
-from scipy.signal import butter, lfilter, freqz
 
 class WavToMidiAutocorrelation:
     sampleRate = 44100
