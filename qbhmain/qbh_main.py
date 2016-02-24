@@ -134,6 +134,7 @@ def search_hum_in_db(hum, dbController, fileHummName):
     bestRatio = -1
     idxMatch = -1
     counter = 0
+    print("Humm file : " + fileHummName)
     print("\n-------------------------------------")
     idxpartial = 0
     idxfull = 0
