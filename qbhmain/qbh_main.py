@@ -11,6 +11,7 @@ from WavToMidi import WavToMidi
 from WavToMidiAutocorrelation import WavToMidiAutocorrelation
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 class NoteEvent:
     tickDuration =  0
@@ -174,15 +175,19 @@ def search_hum_in_db(hum, dbController, fileHummName):
         print("PartialRatio: ", partialRatio)
         print("==============")
 
+    ratioArray = np.add(ratioArray,partialRatioArray)/2
+    # ratioArray = [int(v) for v in ratioArray]
+    print(ratioArray)
     index = np.arange(len(files_db))
     bar_width = 0.35
     opacity = 0.4# error_config = {'ecolor': '0.3'}
     rects1 = plt.bar(index, ratioArray, bar_width, alpha=opacity, color='b', label='Ratio')
     for a,b in zip(index, ratioArray):
-    	plt.text(a+(bar_width/2), 10, str(b))
-    rects2 = plt.bar(index + bar_width, partialRatioArray, bar_width, alpha=opacity, color='r', label='Partial Ratio')
-    for a,b in zip(index, partialRatioArray):
-    	plt.text((a + bar_width)+(bar_width/2), 10, str(b))
+    	# plt.text(a+(bar_width/2), 10, str(b))
+    	plt.text(a, 10, str(b))
+    # rects2 = plt.bar(index + bar_width, partialRatioArray, bar_width, alpha=opacity, color='r', label='Partial Ratio')
+    # for a,b in zip(index, partialRatioArray):
+    # 	plt.text((a + bar_width)+(bar_width/2), 10, str(b))
     plt.xlabel('Group')
     plt.ylabel('Scores')
     plt.title('Scores of ' + fileHummName)
@@ -216,7 +221,7 @@ if __name__ == "__main__":
 			dbController = DBController('QBH')
 			wavToMidi = WavToMidi()
 			wavToMidiAutocorrelation = WavToMidiAutocorrelation()
-			# os.system('clear')
+			os.system('clear')
 			print("Select options :")
 			print("(1) Show song database list")
 			print("(2) Write over database with wav files in wavFiles folder")
@@ -250,9 +255,15 @@ if __name__ == "__main__":
 				print("Press any key to back to menu")
 				input()
 			if choice==3:
+				timedur = []
 				for f in hummFiles:
+					start = time.clock()
 					wavToMidi.convert(f,1)
+					duration = time.clock() - start
+					timedur.append(duration)
+				avgtime = np.sum(timedur)/len(hummFiles)
 				print("\nAll wav files are converted..")
+				print("\nAverage converting time " + str(avgtime))
 				print("Comparing humming data..\n")
 				hummFilesMid = glob.glob("hummFile/*.mid")
 				for f in hummFilesMid:
@@ -266,9 +277,15 @@ if __name__ == "__main__":
 				print("Press any key to back to menu")
 				input()
 			if choice==4:
+				timedur = []
 				for f in hummFiles:
+					start = time.clock()
 					wavToMidiAutocorrelation.convert(f,1)
+					duration = time.clock() - start
+					timedur.append(duration)
+				avgtime = np.sum(timedur)/len(hummFiles)
 				print("\nAll wav files are converted..")
+				print("\nAverage converting time " + str(avgtime))
 				print("Comparing humming data..\n")
 				hummFilesMid = glob.glob("hummFile/*.mid")
 				for f in hummFilesMid:
